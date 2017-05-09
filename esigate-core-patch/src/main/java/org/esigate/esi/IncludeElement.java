@@ -80,8 +80,12 @@ class IncludeElement extends BaseElement {
         // Handle src
         try {
             processPage(src, includeTag, ctx);
-        } catch (IOException | HttpErrorPage | ConfigurationException e) {
+        } catch (IOException | HttpErrorPage e) {
             currentException = e;
+        } catch (ConfigurationException e) {
+            // case uknown provider : log error
+            currentException = e;
+            LOG.error("Esi Include Tag with unknown Provider :" + e.getMessage());
         }
 
         // Handle Alt
@@ -90,8 +94,12 @@ class IncludeElement extends BaseElement {
             currentException = null;
             try {
                 processPage(alt, includeTag, ctx);
-            } catch (IOException | HttpErrorPage | ConfigurationException e) {
+            } catch (IOException | HttpErrorPage e) {
                 currentException = e;
+            } catch (ConfigurationException e) {
+                // case uknown provider : log error
+                currentException = e;
+                LOG.error("Esi Include Tag with unknown Provider :" + e.getMessage());
             }
         }
 
@@ -105,7 +113,7 @@ class IncludeElement extends BaseElement {
                 throw (ConfigurationException) currentException;
             }
             throw new IllegalStateException(
-                    "This type of exception is unexpected here. Should be IOException or HttpErrorPageException.",
+                    "This type of exception is unexpected here. Should be IOException or HttpErrorPageException or ConfigurationException.",
                     currentException);
 
         }
@@ -125,8 +133,8 @@ class IncludeElement extends BaseElement {
     @Override
     protected boolean parseTag(Tag tag, ParserContext ctx) {
         buf = new StringBuilder(Parameters.DEFAULT_BUFFER_SIZE);
-        fragmentReplacements = new HashMap<String, CharSequence>();
-        regexpReplacements = new HashMap<String, CharSequence>();
+        fragmentReplacements = new HashMap<>();
+        regexpReplacements = new HashMap<>();
         includeTag = tag;
         return true;
     }
@@ -137,7 +145,7 @@ class IncludeElement extends BaseElement {
         String xslt = tag.getAttribute("stylesheet");
 
         DriverRequest httpRequest = ctx.getHttpRequest();
-        List<Renderer> rendererList = new ArrayList<Renderer>();
+        List<Renderer> rendererList = new ArrayList<>();
         Driver driver;
         String page;
 
