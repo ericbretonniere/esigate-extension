@@ -1,0 +1,344 @@
+
+<html>
+<head>
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+<title>ESIGATE POC</title>
+</head>
+<body>
+  <h1>Principe:</h1>
+  <ul>
+    <li>Un esigate patché</li>
+    <li>Une extension esigate</li>
+    <li>Un esigate appli web J2EE</li>
+    <li>Un server portail</li>
+    <li>Un server webapp1</li>
+    <li>Un server webapp2</li>
+  </ul>
+  <div>
+    Chaque "application" (portail,webapp1,webapp2) a 1 page index qui contient un menu, et un fragment vignette. La page menu est sur le portail est agglomere
+    les vignettes des 3 applications (avec try/except) + une quatrième qui correspond à un <b>provider qui n'existe pas</b>
+  </div>
+
+  <h2>Deployment : 4 tomcats</h2>
+  <ol>
+    <li>Deployment [server] sur tomcat:8080 (<a href="source/server.xml">server.xml</a> modified : &lt;Context .. path="/"/&gt;)
+    </li>
+    <li>Deployment [portail] [webapp1] [webapp2] sur tomcat:9080</li>
+    <li>Deployment [webapp1] sur tomcat:10080</li>
+    <li>Deployment [webapp2] sur tomcat:11080</li>
+  </ol>
+
+  <h2>Details par module :</h2>
+  <dl>
+    <dt>[esigate-core-patch)] :</dt>
+    <dd>jar contenant l'esigate-core patché</dd>
+    <dt>[extension] :</dt>
+    <dd>jar contenant l'extension esigate</dd>
+    <dt>[http] :</dt>
+    <dd>jar contenant le filtre de temporisation et le filtre de trace</dd>
+    <dt>[server] :</dt>
+    <dd>war esigate avec extension : paramétrage d'un timeout global 20s paramétrage d'un timeout sur les vignette 5s</dd>
+    <dt>[server] :</dt>
+    <dd>war esigate avec extension : paramétrage d'un timeout global 20s paramétrage d'un timeout sur les vignette 5s</dd>
+    <dt>[portail] :</dt>
+    <dd>war application web portail : page index + fragment vignette + fragment menu : filtre de trace</dd>
+    <dt>[webapp1] :</dt>
+    <dd>war application web 1 : page index + fragment vignette : filtre trace</dd>
+    <dt>[webapp2] :</dt>
+    <dd>war application web 2 : page index + fragment vignette : filtre de temporisation 10s sur chaque requete (index,vignette)+ filtre trace</dd>
+  </dl>
+  <h2>Comportement attendu</h2>
+  <div>=> Dans tous les pages index de portail et webapp2 on navigue sans voir le lien vers l'appli 1. Le temps de chargement des pages doit être de 5s
+    (le temps du timeout sur la vignette de la webapp1).</div>
+  <div>=> Dans webapp1 : on doit pouvoir afficher la page en 10s mais sans la vignette</div>
+  <h2>Scénario 0</h2>
+  <div>la page menu contient un tag include vers un provider inconnu</div>
+  <h3>Trace</h3>
+  <div>
+    26-04 22:13:59 38753 [http-nio-8080-exec-5] INFO org.esigate.parser.Parser - Processing start tag &lt;esi:try&gt; <br /> 26-04 22:13:59 38753
+    [http-nio-8080-exec-5] INFO org.esigate.parser.Parser - Processing start tag &lt;esi:attempt&gt; <br /> 26-04 22:13:59 38754 [http-nio-8080-exec-5] INFO
+    org.esigate.parser.Parser - Processing start tag &lt;esi:include src="$(PROVIDER{webapp123456789})/page/vignette.html" fragment="vignette" /&gt; <br />
+    26-04 22:13:59 38754 [http-nio-8080-exec-5] ERROR org.esigate.esi.IncludeElement - ERROR Unknown provider [webapp123456789] found in includeTag, tag is
+    skipped <br /> 26-04 22:13:59 38754 [http-nio-8080-exec-5] INFO org.esigate.parser.Parser - Processing end tag &lt;/esi:attempt&gt; <br /> 26-04 22:13:59
+    38754 [http-nio-8080-exec-5] INFO org.esigate.parser.Parser - Processing start tag &lt;esi:except&gt; <br /> 26-04 22:13:59 38754 [http-nio-8080-exec-5]
+    INFO org.esigate.parser.Parser - Processing end tag &lt;/esi:except&gt; <br /> 26-04 22:13:59 38754 [http-nio-8080-exec-5] INFO org.esigate.parser.Parser -
+    Processing end tag &lt;/esi:try&gt; <br />
+  </div>
+  <h3>OK</h3>
+  <div>le tag include est ignoré,un log erreur réalisé, les pages sont affichées</div>
+  <h2>Conf Scénario 1,2&3</h2>
+  <a href="source/esigate.properties">esigate.properties</a>
+  <div>On ajoute l'extension esigate global avec paramétrage global</div>
+
+  <h2>Scenario 1: Acces Page Portail</h2>
+  <h3>Page sans la vignette webapp1 obtenu en 5.17s sur le navigateur</h3>
+  <h3>Trace</h3>
+  <table>
+    <tbody>
+      <tr>
+        <td>Portail</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>index</td>
+        <td>1 ms</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>menu</td>
+        <td>0,5 ms</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>vignette</td>
+        <td>1 ms</td>
+      </tr>
+      <tr>
+        <td>Webapp2</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>vignette</td>
+        <td>0,4 ms</td>
+      </tr>
+      <tr>
+        <td>Webapp1</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>vignette</td>
+        <td>10000 ms</td>
+      </tr>
+      <tr>
+        <td>Esigate</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>Timeout set for url [/portail/page/index.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>No Timeout set for url [/portail/page/menu.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>Timeout set to [5001] for url [/portail/page/vignette.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>Timeout set to [5001] for url [/webapp1/page/vignette.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>Timeout set to [5001] for url [/webapp2/page/vignette.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>26-04 13:11:24 117664 [http-nio-8080-exec-2] WARN org.esigate.extension.FragmentLogging - webapp1 http://localhost:8080 - GET
+          /webapp1/page/vignette.html HTTP/1.1 {upgrade-insecure-requests: 1,user-agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like
+          Gecko) Chrome/57.0.2987.133 Safari/537.36,accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8,referer:
+          http://localhost:8080/webapp2/page/index.html,accept-encoding: gzip, deflate, sdch, br,accept-language:
+          fr-FR,fr;q=0.8,en-US;q=0.6,en;q=0.4,X-Forwarded-For: 0:0:0:0:0:0:0:1,X-Forwarded-Proto: http,X-Esigate-Int-Surrogate-Id:
+          esigate,Surrogate-Capabilities: esigate="Surrogate/1.0 ESI/1.0 ESI-Inline/1.0 X-ESI-Fragment/1.0 X-ESI-Replace/1.0 X-ESI-XSLT/1.0
+          ESIGATE/4.0",Content-Length: 0,Host: localhost:8080,Connection: Keep-Alive} -> HTTP/1.1 504 Socket timeout (5007 ms) {}</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>Timeout set to [5001] for url [/portail/page/vignette.html]</td>
+      </tr>
+    </tbody>
+  </table>
+  <h3>OK</h3>
+  <div>On obtient la page dans un delai légèrement supérieur au timeout (5001ms paramétré : 5007 declenché) sur la récupération de la vignette de la
+    webapp1</div>
+
+  <h2>Scenario 2: Acces Page webapp2</h2>
+  <h3>Page sans la vignette webapp1 obtenu en 5.03s sur le navigateur</h3>
+  <h3>Trace</h3>
+  <table>
+    <tbody>
+      <tr>
+        <td>Portail</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>menu</td>
+        <td>1,7 ms</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>vignette</td>
+        <td>0,7 ms</td>
+      </tr>
+      <tr>
+        <td>Webapp2</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>index</td>
+        <td>1 ms</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>vignette</td>
+        <td>0,9 ms</td>
+      </tr>
+      <tr>
+        <td>Webapp1</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>vignette</td>
+        <td>10003 ms</td>
+      </tr>
+      <tr>
+        <td>Esigate</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>No Timeout set for url [/portail/page/index.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>No Timeout set for url [/portail/page/menu.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>Timeout set to [5001] for url [/portail/page/vignette.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>Timeout set to [5001] for url [/webapp1/page/vignette.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>Timeout set to [5001] for url [/webapp2/page/vignette.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>26-04 13:31:34 1327645 [http-nio-8080-exec-4] WARN org.esigate.extension.FragmentLogging - webapp1 http://localhost:8080 - GET
+          /webapp1/page/vignette.html HTTP/1.1 {upgrade-insecure-requests: 1,user-agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like
+          Gecko) Chrome/57.0.2987.133 Safari/537.36,accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8,accept-encoding: gzip,
+          deflate, sdch, br,accept-language: fr-FR,fr;q=0.8,en-US;q=0.6,en;q=0.4,X-Forwarded-For: 0:0:0:0:0:0:0:1,X-Forwarded-Proto:
+          http,X-Esigate-Int-Surrogate-Id: esigate,Surrogate-Capabilities: esigate="Surrogate/1.0 ESI/1.0 ESI-Inline/1.0 X-ESI-Fragment/1.0 X-ESI-Replace/1.0
+          X-ESI-XSLT/1.0 ESIGATE/4.0",Content-Length: 0,Host: localhost:8080,Connection: Keep-Alive} -> HTTP/1.1 504 Socket timeout (5003 ms) {}</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>Timeout set to [5001] for url [/portail/page/vignette.html]</td>
+      </tr>
+    </tbody>
+  </table>
+  <h3>=> OK :</h3>
+  <div>on obtient la page dans un delai légèrement supérieur au timeout (5001ms paramétré : 5007 declenché) sur la récupération de la vignette de la
+    webapp1</div>
+
+  <h2>Scenario 3: Acces Page webapp1</h2>
+  <h3>Page sans la vignette webapp1 obtenu en 15.07s sur le navigateur</h3>
+  <h3>Trace</h3>
+  <table>
+    <tbody>
+      <tr>
+        <td>Portail</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>menu</td>
+        <td>3,6 ms</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>vignette</td>
+        <td>2,1 ms</td>
+      </tr>
+      <tr>
+        <td>Webapp2</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>vignette</td>
+        <td>4 ms</td>
+      </tr>
+      <tr>
+        <td>Webapp1</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>index</td>
+        <td>10003 ms</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td>vignette</td>
+        <td>10003 ms</td>
+      </tr>
+      <tr>
+        <td>Esigate</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>No Timeout set for url [/portail/page/index.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>No Timeout set for url [/portail/page/menu.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>Timeout set to [5001] for url [/portail/page/vignette.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>Timeout set to [5001] for url [/webapp1/page/vignette.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>Timeout set to [5001] for url [/webapp2/page/vignette.html]</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>26-04 14:02:16 3170428 [http-nio-8080-exec-7] WARN org.esigate.extension.FetchLogging - http://localhost:8080 - GET
+          /webapp1/page/vignette.html HTTP/1.1 {upgrade-insecure-requests: 1,user-agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like
+          Gecko) Chrome/57.0.2987.133 Safari/537.36,accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8,accept-encoding: gzip,
+          deflate, sdch, br,accept-language: fr-FR,fr;q=0.8,en-US;q=0.6,en;q=0.4,X-Forwarded-For: 0:0:0:0:0:0:0:1,X-Forwarded-Proto:
+          http,X-Esigate-Int-Surrogate-Id: esigate,Surrogate-Capabilities: esigate="Surrogate/1.0 ESI/1.0 ESI-Inline/1.0 X-ESI-Fragment/1.0 X-ESI-Replace/1.0
+          X-ESI-XSLT/1.0 ESIGATE/4.0",Content-Length: 0,Host: localhost:8080,Connection: Keep-Alive} -> HTTP/1.1 504 Socket timeout (5004 ms) {}</td>
+      </tr>
+      <tr>
+        <td></td>
+        <td colspan=2>Timeout set to [5001] for url [/portail/page/vignette.html]</td>
+      </tr>
+    </tbody>
+  </table>
+  <h3>OK</h3>
+  <div>
+    On obtient la page dans un delai largement supérieur au delai de récupération de la page index de la webapp1 (10s), le timeout s'est bien declenché sur la
+    vignette qui n'est pas affiché. Le timeout ne s'est pas declenché sur la page index de la webapp1 ce qui a permit son affichage. Le delai est <br /> le
+    temps de récupération de l'index : 10s<br /> + le temps de récupération du menu<br /> + le temps de récupération de chaque vignette (timeout sur la
+    vignette appli au bout de 5s)<br /> =15 ce qui est normal <br />
+  </div>
+  <h3>OK</h3>
+  <div>l'extension global et sa configuration fonctionne comme prevu</div>
+  <h2>Conf Scénario 4</h2>
+  <a href="source/esigateS4.properties">esigate.properties</a>
+  <div>On ajoute l'extension esigate sur le provider webapp1 uniquement avec paramétrage global</div>
+  <h3>OK</h3>
+  <div>L'extension n'est active que sur le provider. Le paramétrage global s'applique.</div>
+
+  <h2>Conf Scénario 5</h2>
+  <a href="source/esigateS5.properties">esigate.properties</a>
+  <div>On ajoute l'extension esigate sur le provider webapp1 uniquement avec paramétrage local, le parametrage global est conserve avec des valeurs
+    differentes</div>
+  <h3>OK</h3>
+  <div>Timeout set to [5002] for url pattern [vignette.html]. Le parametrage local est bien pris en compte. Le paramétrage global n'est pas transmis a
+    l'extension</div>
+
+
+  <h2>Conf Scénario 6</h2>
+  <a href="source/esigateS6.properties">esigate.properties</a>
+  <div>On ajoute l'extension esigate sur le provider webapp1 uniquement avec paramétrage local et on ajoute l'extension global avec un paramétrage global
+    différent</div>
+
+
+</body>
+</html>

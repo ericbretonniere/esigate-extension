@@ -1,0 +1,72 @@
+<esi:fragment name="menu">
+  <div>
+    <div>
+      <esi:try>
+        <esi:attempt>
+          <esi:include src="$(PROVIDER{portail})/page/vignette.html" fragment="vignette" />
+        </esi:attempt>
+        <esi:except>[Portail KO]</esi:except>
+      </esi:try>
+    </div>
+    <div>
+      <esi:try>
+        <esi:attempt>
+          <esi:include src="$(PROVIDER{webapp1})/page/vignette.html" fragment="vignette" />
+        </esi:attempt>
+        <esi:except>[WebApp1 KO]</esi:except>
+      </esi:try>
+    </div>
+    <div>
+      <esi:try>
+        <esi:attempt>
+          <esi:include src="$(PROVIDER{webapp2})/page/vignette.html" fragment="vignette" />
+        </esi:attempt>
+        <esi:except>[WebApp2 KO]</esi:except>
+      </esi:try>
+    </div>
+    <div>
+      <div>Try except :</div>
+      <div>
+        <esi:try>
+          <esi:attempt>
+            <esi:include src="$(PROVIDER{webapp123456789})/page/vignette.html" fragment="vignette" />
+          </esi:attempt>
+          <esi:except>[WebApp3 KO try except]</esi:except>
+        </esi:try>
+      </div>
+    </div>
+    <div>
+      <div>On error continue:</div>
+      <div>
+        <esi:include src="$(PROVIDER{webapp123456789})/page/vignette.html" fragment="vignette" onerror="continue" />
+      </div>
+    </div>
+    <div>
+      <div>On error continue with alt:</div>
+      <div>
+        <esi:include src="$(PROVIDER{webapp123456789})/page/vignette.html" fragment="vignette" onerror="continue"
+          alt="$(PROVIDER{portail})/page/vignetteError.html" />
+      </div>
+    </div>
+    <!-- 
+    <div>
+      <div>On error fatal error:</div>
+      <div>
+        < esi : include src="$(PROVIDER{webapp123456789})/page/vignette.html" fragment="vignette" />
+        <div>
+        Etat HTTP 500 - No configuration properties found for factory : webapp123456789<br/> 
+        type Rapport d''exception message No configuration properties found for<br/>
+        factory : webapp123456789 description Le serveur a rencontré une erreur interne qui l''a empêché de satisfaire la requête. exception<br/>
+        org.esigate.ConfigurationException: No configuration properties found for factory : webapp123456789<br/>
+        org.esigate.DriverFactory.getInstance(DriverFactory.java:227) org.esigate.esi.IncludeElement.processPage(IncludeElement.java:163)<br/>
+        org.esigate.esi.IncludeElement.onTagEnd(IncludeElement.java:82) org.esigate.parser.ParserContextImpl.endElement(ParserContextImpl.java:93)<br/>
+        org.esigate.parser.Parser.parse(Parser.java:89) org.esigate.esi.EsiRenderer.render(EsiRenderer.java:122)<br/>
+        org.esigate.Driver.performRendering(Driver.java:406) org.esigate.Driver.render(Driver.java:210)<br/>
+        org.esigate.esi.IncludeElement.processPage(IncludeElement.java:205) org.esigate.esi.IncludeElement.onTagEnd(IncludeElement.java:82)<br/>
+        org.esigate.parser.ParserContextImpl.endElement(ParserContextImpl.java:93) org.esigate.parser.Parser.parse(Parser.java:89)<br/>
+        </div>
+      </div>
+    </div>
+     -->
+  </div>
+</esi:fragment>
